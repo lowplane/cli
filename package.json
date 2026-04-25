@@ -1,0 +1,44 @@
+{
+  "name": "@costify/cost",
+  "version": "0.0.0",
+  "description": "Cost & security analysis for Kubernetes Helm charts. No login. No agent. No cluster connection required.",
+  "license": "Apache-2.0",
+  "homepage": "https://costify.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lowplane/cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lowplane/cli/issues"
+  },
+  "keywords": [
+    "kubernetes",
+    "k8s",
+    "helm",
+    "cost",
+    "finops",
+    "security",
+    "cli",
+    "costify"
+  ],
+  "bin": {
+    "costify": "npm/index.js"
+  },
+  "scripts": {
+    "postinstall": "node ./npm/postinstall.js",
+    "test": "node -e \"require('./npm/index.js')\""
+  },
+  "files": [
+    "npm/index.js",
+    "npm/postinstall.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "os": [
+    "darwin",
+    "linux"
+  ]
+}
