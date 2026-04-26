@@ -114,8 +114,11 @@ func TestRun_StableOrder(t *testing.T) {
 func TestAll_HasExpectedDetectors(t *testing.T) {
 	dets := All()
 	want := map[string]bool{
-		"cpu-overprovisioned":  false,
-		"missing-memory-limit": false,
+		"cpu-overprovisioned":    false,
+		"memory-overprovisioned": false,
+		"missing-memory-limit":   false,
+		"missing-cpu-limit":      false,
+		"image-pinned-latest":    false,
 	}
 	for _, d := range dets {
 		want[d.ID()] = true

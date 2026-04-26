@@ -94,7 +94,10 @@ func Run(workloads []parser.Workload, dets []Detector) []Finding {
 func All() []Detector {
 	return []Detector{
 		newCPUOverprovisioned(),
+		newMemoryOverprovisioned(),
 		newMissingMemoryLimit(),
+		newMissingCPULimit(),
+		newImagePinnedLatest(),
 	}
 }
 
