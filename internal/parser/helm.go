@@ -40,12 +40,22 @@ type Workload struct {
 // workload that has `runAsNonRoot: false` is materially different from
 // one that omits the field entirely.
 type SecurityContext struct {
-	RunAsNonRoot           *bool
-	Privileged             *bool
-	ReadOnlyRootFilesystem *bool
-	HostNetwork            *bool
-	HostPath               *bool // any volume sets hostPath
+	RunAsNonRoot             *bool
+	RunAsUser                *int64
+	Privileged               *bool
+	ReadOnlyRootFilesystem   *bool
+	HostNetwork              *bool
+	HostPID                  *bool
+	HostIPC                  *bool
+	HostPath                 *bool // any volume sets hostPath
 	AllowPrivilegeEscalation *bool
+	// AutomountServiceAccountToken: nil means k8s default (true);
+	// pointer-false means the chart explicitly disabled the auto-mount.
+	AutomountServiceAccountToken *bool
+	// CapabilitiesAdd / CapabilitiesDrop are case-preserving lists.
+	// "ALL" in CapabilitiesDrop is treated as "drop everything".
+	CapabilitiesAdd  []string
+	CapabilitiesDrop []string
 }
 
 // ResourceList captures the CPU and memory of either requests or limits.
@@ -292,14 +302,33 @@ func readHasHPA(n *yaml.Node) bool {
 }
 
 // readSecurity reads `securityContext` (pod or container level) plus
-// `hostNetwork` / `volumes[*].hostPath` flags. The walker only inspects
-// the workload's direct map; deep template rendering is Phase 7.
+// host-namespace flags, volumes, and service-account-token automount.
+// The walker only inspects the workload's direct map; deep template
+// rendering is Phase 7.
 func readSecurity(n *yaml.Node) SecurityContext {
 	var sec SecurityContext
 
-	if hostNet := findChild(n, "hostNetwork"); hostNet != nil && hostNet.Kind == yaml.ScalarNode {
-		b := boolValue(hostNet.Value)
-		sec.HostNetwork = &b
+	for _, key := range [][2]string{
+		{"hostNetwork", "HostNetwork"},
+		{"hostPID", "HostPID"},
+		{"hostIPC", "HostIPC"},
+	} {
+		if v := findChild(n, key[0]); v != nil && v.Kind == yaml.ScalarNode {
+			b := boolValue(v.Value)
+			switch key[1] {
+			case "HostNetwork":
+				sec.HostNetwork = &b
+			case "HostPID":
+				sec.HostPID = &b
+			case "HostIPC":
+				sec.HostIPC = &b
+			}
+		}
+	}
+
+	if amt := findChild(n, "automountServiceAccountToken"); amt != nil && amt.Kind == yaml.ScalarNode {
+		b := boolValue(amt.Value)
+		sec.AutomountServiceAccountToken = &b
 	}
 
 	if vols := findChild(n, "volumes"); vols != nil && vols.Kind == yaml.SequenceNode {
@@ -321,8 +350,6 @@ func readSecurity(n *yaml.Node) SecurityContext {
 		}
 		applySecFields(ctx, &sec)
 	}
-	// Helm charts also commonly nest a per-container securityContext
-	// under containerSecurityContext directly on the workload.
 	return sec
 }
 
@@ -330,6 +357,12 @@ func applySecFields(ctx *yaml.Node, out *SecurityContext) {
 	if v := findChild(ctx, "runAsNonRoot"); v != nil && v.Kind == yaml.ScalarNode {
 		b := boolValue(v.Value)
 		out.RunAsNonRoot = &b
+	}
+	if v := findChild(ctx, "runAsUser"); v != nil && v.Kind == yaml.ScalarNode {
+		n, ok := parseInt64(v.Value)
+		if ok {
+			out.RunAsUser = &n
+		}
 	}
 	if v := findChild(ctx, "privileged"); v != nil && v.Kind == yaml.ScalarNode {
 		b := boolValue(v.Value)
@@ -343,6 +376,51 @@ func applySecFields(ctx *yaml.Node, out *SecurityContext) {
 		b := boolValue(v.Value)
 		out.AllowPrivilegeEscalation = &b
 	}
+	if caps := findChild(ctx, "capabilities"); caps != nil && caps.Kind == yaml.MappingNode {
+		out.CapabilitiesAdd = readStringList(findChild(caps, "add"))
+		out.CapabilitiesDrop = readStringList(findChild(caps, "drop"))
+	}
+}
+
+// readStringList returns the scalar entries of a YAML sequence,
+// trimming nils and non-scalar entries. Returns nil for nil/non-sequence input.
+func readStringList(n *yaml.Node) []string {
+	if n == nil || n.Kind != yaml.SequenceNode {
+		return nil
+	}
+	out := make([]string, 0, len(n.Content))
+	for _, c := range n.Content {
+		if c.Kind == yaml.ScalarNode && c.Value != "" {
+			out = append(out, c.Value)
+		}
+	}
+	return out
+}
+
+// parseInt64 parses YAML integer scalars; tolerates "0", "1000", "65532", etc.
+// Returns (value, true) on success.
+func parseInt64(s string) (int64, bool) {
+	if s == "" {
+		return 0, false
+	}
+	var negative bool
+	i := 0
+	if s[0] == '-' {
+		negative = true
+		i = 1
+	}
+	var v int64
+	for ; i < len(s); i++ {
+		c := s[i]
+		if c < '0' || c > '9' {
+			return 0, false
+		}
+		v = v*10 + int64(c-'0')
+	}
+	if negative {
+		v = -v
+	}
+	return v, true
 }
 
 func boolValue(s string) bool {
