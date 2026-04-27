@@ -7,6 +7,7 @@ package main
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -15,25 +16,46 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/lowplane/sevro/internal/analyze"
+	"github.com/lowplane/sevro/internal/config"
 	"github.com/lowplane/sevro/internal/render"
 	"github.com/lowplane/sevro/internal/render/style"
+	"github.com/lowplane/sevro/internal/rules"
 )
+
+// Exit codes — stable contract for CI integration.
+const (
+	exitSuccess     = 0 // no findings ≥ threshold
+	exitFindings    = 1 // findings ≥ threshold reported
+	exitInvocation  = 2 // invocation / parse error
+	exitInternal    = 3 // unexpected runtime error
+)
+
+// errFindings is a sentinel returned from RunE so main can map it to exitFindings.
+var errFindings = errors.New("sevro: findings exceed threshold")
 
 var version = "dev"
 
 const accuracyDisclosure = "Sandbox accuracy: ±40%. Install the Sevro agent for exact numbers (sevro.dev/get)."
 
 func main() {
-	if err := newRootCmd().Execute(); err != nil {
-		// Surface the underlying error in styled red on a TTY; otherwise
-		// fall back to cobra's default plain stderr write.
+	err := newRootCmd().Execute()
+	switch {
+	case err == nil:
+		os.Exit(exitSuccess)
+	case errors.Is(err, errFindings):
+		// Already-rendered finding output; suppress an additional error line.
+		os.Exit(exitFindings)
+	default:
 		printError(os.Stderr, err)
-		os.Exit(1)
+		os.Exit(exitInvocation)
 	}
 }
 
 func newRootCmd() *cobra.Command {
-	var noColor bool
+	var (
+		noColor    bool
+		configPath string
+	)
 
 	root := &cobra.Command{
 		Use:   "sevro",
@@ -60,10 +82,22 @@ security findings — entirely offline, no login, no agent.
 	}
 
 	root.PersistentFlags().BoolVar(&noColor, "no-color", false, "disable colored output (also: NO_COLOR env)")
+	root.PersistentFlags().StringVar(&configPath, "config", "", "path to .sevro.yaml (default: ./.sevro.yaml or $SEVRO_CONFIG)")
 
-	// Stash the no-color decision in a context so subcommands can read it.
-	root.PersistentPreRun = func(cmd *cobra.Command, _ []string) {
-		cmd.SetContext(withColorPolicy(cmd.Context(), resolveColor(cmd, noColor)))
+	// Stash the no-color decision and the loaded config in context so
+	// subcommands can read both.
+	root.PersistentPreRunE = func(cmd *cobra.Command, _ []string) error {
+		cfg, err := config.Load(configPath)
+		if err != nil {
+			return err
+		}
+		// Config-level no_color implies --no-color unless flag explicitly disabled.
+		effectiveNoColor := noColor || cfg.NoColor
+		ctx := cmd.Context()
+		ctx = withColorPolicy(ctx, resolveColor(cmd, effectiveNoColor))
+		ctx = withConfig(ctx, cfg)
+		cmd.SetContext(ctx)
+		return nil
 	}
 
 	root.SetVersionTemplate(versionTemplate())
@@ -88,10 +122,13 @@ func versionTemplate() string {
 
 func newAnalyzeCmd() *cobra.Command {
 	var (
-		jsonOut bool
-		offline bool
-		share   bool
-		roast   bool
+		jsonOut    bool
+		offline    bool
+		share      bool
+		roast      bool
+		minSev     string
+		detectors  []string
+		failOn     string // severity threshold that triggers exit code 1
 	)
 	cmd := &cobra.Command{
 		Use:   "analyze [chart]",
@@ -102,7 +139,8 @@ inefficiencies and security findings.
 ` + accuracyDisclosure,
 		Example: `  sevro analyze ./my-chart
   sevro analyze ./values.yaml --json
-  sevro analyze ./chart --no-color`,
+  sevro analyze ./chart --severity=med --fail-on=high
+  sevro analyze ./chart --detector cpu-overprovisioned --detector missing-memory-limit`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := "."
@@ -117,22 +155,97 @@ inefficiencies and security findings.
 			if err != nil {
 				return err
 			}
-			if jsonOut {
-				return render.JSON(cmd.OutOrStdout(), rep)
+
+			// Merge config-file defaults with flags. Flags win when supplied.
+			cfg := configFrom(cmd.Context())
+			effSev := minSev
+			if effSev == "" {
+				effSev = cfg.MinSeverity
 			}
-			// `--share` and `--roast` are accepted now so flags land in
-			// muscle memory; their behavior arrives in later phases.
+			effDetectors := detectors
+			if len(effDetectors) == 0 {
+				effDetectors = cfg.Detectors
+			}
+			effFailOn := failOn
+			if effFailOn == "" {
+				effFailOn = cfg.FailOn
+			}
+
+			rep = analyze.Filter(rep, analyze.FilterOptions{
+				MinSeverity: rules.Severity(toUpper(effSev)),
+				DetectorIDs: effDetectors,
+			})
+			if err := emitReport(cmd, rep, jsonOut); err != nil {
+				return err
+			}
 			_ = offline
 			_ = share
 			_ = roast
-			return render.Text(cmd.OutOrStdout(), rep, renderOpts(cmd))
+			return checkFailOn(rep, effFailOn)
 		},
 	}
 	cmd.Flags().BoolVar(&jsonOut, "json", false, "emit machine-readable JSON")
 	cmd.Flags().BoolVar(&offline, "offline", true, "do not perform any network calls (always true in Phase 1)")
 	cmd.Flags().BoolVar(&share, "share", false, "upload sanitized analysis to sevro.dev/r/<hash> (opt-in)")
 	cmd.Flags().BoolVar(&roast, "roast", false, "humorous output (findings stay accurate)")
+	cmd.Flags().StringVar(&minSev, "severity", "", "drop findings below this severity (low|med|high)")
+	cmd.Flags().StringArrayVar(&detectors, "detector", nil, "only run findings from these detector IDs (repeatable)")
+	cmd.Flags().StringVar(&failOn, "fail-on", "", "exit code 1 when any finding is at this severity or higher (low|med|high)")
 	return cmd
+}
+
+// emitReport renders the report in JSON or styled text.
+func emitReport(cmd *cobra.Command, rep render.Report, jsonOut bool) error {
+	if jsonOut {
+		return render.JSON(cmd.OutOrStdout(), rep)
+	}
+	return render.Text(cmd.OutOrStdout(), rep, renderOpts(cmd))
+}
+
+// checkFailOn returns errFindings when any finding meets or exceeds
+// the threshold severity. Empty threshold is a no-op.
+func checkFailOn(rep render.Report, threshold string) error {
+	if threshold == "" {
+		return nil
+	}
+	min := rules.Severity(toUpper(threshold))
+	if !validSeverity(min) {
+		return fmt.Errorf("invalid --fail-on severity %q (want low|med|high)", threshold)
+	}
+	for _, f := range rep.Findings {
+		if severityRank(f.Severity) >= severityRank(min) {
+			return errFindings
+		}
+	}
+	return nil
+}
+
+func severityRank(s rules.Severity) int {
+	switch s {
+	case rules.SeverityHigh:
+		return 3
+	case rules.SeverityMed:
+		return 2
+	case rules.SeverityLow:
+		return 1
+	}
+	return 0
+}
+
+func validSeverity(s rules.Severity) bool {
+	return s == rules.SeverityHigh || s == rules.SeverityMed || s == rules.SeverityLow
+}
+
+func toUpper(s string) string {
+	out := make([]byte, len(s))
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c >= 'a' && c <= 'z' {
+			c -= 'a' - 'A'
+		}
+		out[i] = c
+	}
+	return string(out)
 }
 
 // demoChart is the bundled demo values file. //go:embed lets us ship
@@ -251,36 +364,91 @@ func (r *bytesReaderImpl) Read(p []byte) (int, error) {
 }
 
 func newDiffCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "diff <a> <b>",
-		Short: "Show cost delta between two values files",
-		Args:  cobra.ExactArgs(2),
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			return notYetImplemented(cmd)
+	var jsonOut bool
+	cmd := &cobra.Command{
+		Use:     "diff <a> <b>",
+		Short:   "Show cost delta between two values files",
+		Args:    cobra.ExactArgs(2),
+		Example: `  sevro diff ./before/values.yaml ./after/values.yaml`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			rep, err := analyze.DiffPaths(args[0], args[1])
+			if err != nil {
+				return err
+			}
+			if jsonOut {
+				return rep.WriteJSON(cmd.OutOrStdout())
+			}
+			return rep.WriteText(cmd.OutOrStdout(), renderOpts(cmd))
 		},
 	}
+	cmd.Flags().BoolVar(&jsonOut, "json", false, "emit machine-readable JSON")
+	return cmd
 }
 
 func newScoreCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "score [chart]",
-		Short: "Assign an efficiency score to a chart",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			return notYetImplemented(cmd)
+	var jsonOut bool
+	cmd := &cobra.Command{
+		Use:     "score [chart]",
+		Short:   "Assign an efficiency score to a chart",
+		Args:    cobra.MaximumNArgs(1),
+		Example: "  sevro score ./my-chart\n  sevro score ./values.yaml --json",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			path := "."
+			if len(args) == 1 {
+				path = args[0]
+			}
+			abs, err := filepath.Abs(path)
+			if err != nil {
+				return err
+			}
+			rep, err := analyze.RunPath(abs)
+			if err != nil {
+				return err
+			}
+			s := analyze.Compute(rep.Source, rep.Workloads, rep.Findings)
+			if jsonOut {
+				return s.WriteJSON(cmd.OutOrStdout())
+			}
+			return s.WriteText(cmd.OutOrStdout(), renderOpts(cmd))
 		},
 	}
+	cmd.Flags().BoolVar(&jsonOut, "json", false, "emit machine-readable JSON")
+	return cmd
 }
 
 func newAuditCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:    "audit",
-		Short:  "Audit a chart for security findings only",
-		Hidden: false,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			return notYetImplemented(cmd)
+	var (
+		jsonOut bool
+		failOn  string
+	)
+	cmd := &cobra.Command{
+		Use:     "audit [chart]",
+		Short:   "Audit a chart for security findings only",
+		Args:    cobra.MaximumNArgs(1),
+		Example: `  sevro audit ./my-chart\n  sevro audit ./values.yaml --fail-on=high`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			path := "."
+			if len(args) == 1 {
+				path = args[0]
+			}
+			abs, err := filepath.Abs(path)
+			if err != nil {
+				return err
+			}
+			rep, err := analyze.RunPath(abs)
+			if err != nil {
+				return err
+			}
+			rep = analyze.Filter(rep, analyze.FilterOptions{SecurityOnly: true})
+			if err := emitReport(cmd, rep, jsonOut); err != nil {
+				return err
+			}
+			return checkFailOn(rep, failOn)
 		},
 	}
+	cmd.Flags().BoolVar(&jsonOut, "json", false, "emit machine-readable JSON")
+	cmd.Flags().StringVar(&failOn, "fail-on", "high", "exit code 1 when any finding is at this severity or higher (low|med|high)")
+	return cmd
 }
 
 func newWatchCmd() *cobra.Command {
@@ -294,14 +462,25 @@ func newWatchCmd() *cobra.Command {
 }
 
 func newCompareCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "compare <a> <b>",
-		Short: "Side-by-side comparison of two charts",
-		Args:  cobra.ExactArgs(2),
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			return notYetImplemented(cmd)
+	var jsonOut bool
+	cmd := &cobra.Command{
+		Use:     "compare <a> <b>",
+		Short:   "Side-by-side comparison of two charts (currently a diff alias)",
+		Args:    cobra.ExactArgs(2),
+		Example: `  sevro compare ./before/values.yaml ./after/values.yaml`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			rep, err := analyze.DiffPaths(args[0], args[1])
+			if err != nil {
+				return err
+			}
+			if jsonOut {
+				return rep.WriteJSON(cmd.OutOrStdout())
+			}
+			return rep.WriteText(cmd.OutOrStdout(), renderOpts(cmd))
 		},
 	}
+	cmd.Flags().BoolVar(&jsonOut, "json", false, "emit machine-readable JSON")
+	return cmd
 }
 
 func notYetImplemented(cmd *cobra.Command) error {

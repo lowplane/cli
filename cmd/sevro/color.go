@@ -1,6 +1,10 @@
 package main
 
-import "context"
+import (
+	"context"
+
+	"github.com/lowplane/sevro/internal/config"
+)
 
 // colorPolicyKey is the context key under which the resolved
 // colour-policy boolean is stashed by the root command. Using a
@@ -24,6 +28,27 @@ func colorPolicyFrom(ctx context.Context) bool {
 	v, ok := ctx.Value(colorPolicyKey{}).(bool)
 	if !ok {
 		return false
+	}
+	return v
+}
+
+// configKey is the context key for the loaded .sevro.yaml.
+type configKey struct{}
+
+// withConfig stashes the loaded Config in ctx.
+func withConfig(ctx context.Context, c config.Config) context.Context {
+	return context.WithValue(ctx, configKey{}, c)
+}
+
+// configFrom recovers the Config; returns the zero Config when none
+// is set so callers don't need to nil-check.
+func configFrom(ctx context.Context) config.Config {
+	if ctx == nil {
+		return config.Config{}
+	}
+	v, ok := ctx.Value(configKey{}).(config.Config)
+	if !ok {
+		return config.Config{}
 	}
 	return v
 }
