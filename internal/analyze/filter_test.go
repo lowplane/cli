@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/lowplane/sevro/internal/render"
-	"github.com/lowplane/sevro/internal/rules"
+	"github.com/lowplane/sevro/pkg/rules"
 )
 
 func sample() render.Report {

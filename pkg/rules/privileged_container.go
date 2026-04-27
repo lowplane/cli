@@ -1,6 +1,6 @@
 package rules
 
-import "github.com/lowplane/sevro/internal/parser"
+import "github.com/lowplane/sevro/pkg/parser"
 
 // privilegedContainer fires when securityContext.privileged is true.
 // Privileged containers bypass nearly every isolation control the

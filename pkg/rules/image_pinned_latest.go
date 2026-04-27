@@ -3,7 +3,7 @@ package rules
 import (
 	"fmt"
 
-	"github.com/lowplane/sevro/internal/parser"
+	"github.com/lowplane/sevro/pkg/parser"
 )
 
 // imagePinnedLatest fires when an image tag is empty (implicit

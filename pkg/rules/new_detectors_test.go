@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lowplane/sevro/internal/parser"
+	"github.com/lowplane/sevro/pkg/parser"
 )
 
 func TestMemoryOverprovisioned_Triggers(t *testing.T) {

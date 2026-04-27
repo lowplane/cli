@@ -1,6 +1,6 @@
 package rules
 
-import "github.com/lowplane/sevro/internal/parser"
+import "github.com/lowplane/sevro/pkg/parser"
 
 // unboundedImageTag fires when an image is tagged with a known
 // floating tag — `main`, `master`, `stable`, `dev`, `staging`,

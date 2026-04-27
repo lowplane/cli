@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lowplane/sevro/internal/rules"
+	"github.com/lowplane/sevro/pkg/rules"
 )
 
 // stripANSI removes basic ANSI/OSC sequences so assertions can check

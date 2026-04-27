@@ -3,7 +3,7 @@ package rules
 import (
 	"fmt"
 
-	"github.com/lowplane/sevro/internal/parser"
+	"github.com/lowplane/sevro/pkg/parser"
 )
 
 // cpuLimitFarAboveRequest and memoryLimitFarAboveRequest fire when the

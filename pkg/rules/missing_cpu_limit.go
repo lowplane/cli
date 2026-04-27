@@ -1,6 +1,6 @@
 package rules
 
-import "github.com/lowplane/sevro/internal/parser"
+import "github.com/lowplane/sevro/pkg/parser"
 
 // missingCPULimit fires when a workload sets a CPU request but no
 // limit. Modern guidance (Tim Hockin et al) is to actually omit CPU

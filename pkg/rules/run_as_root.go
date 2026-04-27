@@ -1,6 +1,6 @@
 package rules
 
-import "github.com/lowplane/sevro/internal/parser"
+import "github.com/lowplane/sevro/pkg/parser"
 
 // runAsRoot fires when securityContext.runAsNonRoot is explicitly
 // false, OR when neither pod nor container security context declares

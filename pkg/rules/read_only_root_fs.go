@@ -1,6 +1,6 @@
 package rules
 
-import "github.com/lowplane/sevro/internal/parser"
+import "github.com/lowplane/sevro/pkg/parser"
 
 // readOnlyRootFSMissing fires when the workload does not declare a
 // read-only root filesystem. Mounting `/` as read-only is a cheap

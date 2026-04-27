@@ -1,7 +1,7 @@
 package rules
 
 import (
-	"github.com/lowplane/sevro/internal/parser"
+	"github.com/lowplane/sevro/pkg/parser"
 )
 
 // missingMemoryLimit flags workloads with a memory request but no

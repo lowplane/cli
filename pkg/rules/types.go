@@ -9,7 +9,7 @@ package rules
 import (
 	"sort"
 
-	"github.com/lowplane/sevro/internal/parser"
+	"github.com/lowplane/sevro/pkg/parser"
 )
 
 // Severity captures the suggested triage urgency.

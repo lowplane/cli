@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/lowplane/sevro/internal/render/style"
-	"github.com/lowplane/sevro/internal/rules"
+	"github.com/lowplane/sevro/pkg/rules"
 )
 
 // AccuracyDisclosure is the mandatory line every output must contain.

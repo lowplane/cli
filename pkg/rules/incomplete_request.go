@@ -1,6 +1,6 @@
 package rules
 
-import "github.com/lowplane/sevro/internal/parser"
+import "github.com/lowplane/sevro/pkg/parser"
 
 // cpuWithoutMemoryRequest and memoryWithoutCPURequest fire when only
 // one half of `requests` is declared. Half-declared requests put the

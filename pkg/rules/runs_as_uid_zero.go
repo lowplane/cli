@@ -1,6 +1,6 @@
 package rules
 
-import "github.com/lowplane/sevro/internal/parser"
+import "github.com/lowplane/sevro/pkg/parser"
 
 // runsAsUIDZero fires when runAsUser is explicitly 0 (root). Distinct
 // from `run-as-root` (which fires on `runAsNonRoot=false`) — this one

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lowplane/sevro/internal/parser"
+	"github.com/lowplane/sevro/pkg/parser"
 )
 
 // q is a helper to make tests terse.

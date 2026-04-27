@@ -1,6 +1,6 @@
 package rules
 
-import "github.com/lowplane/sevro/internal/parser"
+import "github.com/lowplane/sevro/pkg/parser"
 
 // hostPathVolume fires when a workload mounts any volume from the
 // node's filesystem. Most application charts do not need this; when

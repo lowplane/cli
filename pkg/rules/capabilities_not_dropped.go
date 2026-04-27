@@ -1,6 +1,6 @@
 package rules
 
-import "github.com/lowplane/sevro/internal/parser"
+import "github.com/lowplane/sevro/pkg/parser"
 
 // capabilitiesNotDroppedAll fires when capabilities.drop does not
 // include "ALL". CIS Kubernetes Benchmark 5.2.8 ("Minimize the

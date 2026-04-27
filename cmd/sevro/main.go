@@ -19,7 +19,7 @@ import (
 	"github.com/lowplane/sevro/internal/config"
 	"github.com/lowplane/sevro/internal/render"
 	"github.com/lowplane/sevro/internal/render/style"
-	"github.com/lowplane/sevro/internal/rules"
+	"github.com/lowplane/sevro/pkg/rules"
 	"github.com/lowplane/sevro/internal/share"
 )
 

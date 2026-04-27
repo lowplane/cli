@@ -1,6 +1,6 @@
 package rules
 
-import "github.com/lowplane/sevro/internal/parser"
+import "github.com/lowplane/sevro/pkg/parser"
 
 // hostPID and hostIPC fire when the workload joins the node's PID
 // or IPC namespace. Either flag is a serious isolation breach:

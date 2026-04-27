@@ -3,7 +3,7 @@ package analyze
 import (
 	"testing"
 
-	"github.com/lowplane/sevro/internal/rules"
+	"github.com/lowplane/sevro/pkg/rules"
 )
 
 func TestCompute_NoFindings_PerfectScore(t *testing.T) {

@@ -1,6 +1,6 @@
 package rules
 
-import "github.com/lowplane/sevro/internal/parser"
+import "github.com/lowplane/sevro/pkg/parser"
 
 // allowPrivilegeEscalation fires when allowPrivilegeEscalation is true
 // (or unset, which defaults to true). The flag is the kernel's

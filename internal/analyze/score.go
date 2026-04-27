@@ -1,6 +1,6 @@
 package analyze
 
-import "github.com/lowplane/sevro/internal/rules"
+import "github.com/lowplane/sevro/pkg/rules"
 
 // Score is the result of `sevro score [chart]` — a 0-100 efficiency
 // score derived from the severities of detector findings, plus the

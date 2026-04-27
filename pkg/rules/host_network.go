@@ -1,6 +1,6 @@
 package rules
 
-import "github.com/lowplane/sevro/internal/parser"
+import "github.com/lowplane/sevro/pkg/parser"
 
 // hostNetwork fires when hostNetwork=true. Host networking flattens
 // the pod's network namespace onto the node, exposing localhost-bound
