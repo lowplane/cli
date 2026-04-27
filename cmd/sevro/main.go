@@ -228,15 +228,31 @@ func openOutput(cmd *cobra.Command, path string) (io.Writer, func(), error) {
 	return f, func() { _ = f.Close() }, nil
 }
 
-// emitShareURL prints `--share` provenance to stderr so it doesn't
-// pollute --json or --output. Returns nil even on share errors;
-// share is best-effort UX, not a blocking failure path.
+// emitShareURL handles the `--share` flag end-to-end.
+//
+// It computes the local content-addressable hash, attempts to upload
+// the sanitised payload to the sandbox endpoint, and prints the
+// resulting `sevro.dev/r/<hash>` URL to stderr (so JSON/text output on
+// stdout stays clean).
+//
+// The function never blocks the caller's success path — if the upload
+// fails (offline, sandbox down, 5xx), we still print the URL so the
+// user has a stable identifier they can re-share later. The endpoint
+// is overridable via SEVRO_SHARE_URL for self-hosted deploys.
 func emitShareURL(cmd *cobra.Command, rep any) {
-	url, err := share.URL(rep)
-	if err != nil {
+	endpoint := os.Getenv("SEVRO_SHARE_URL")
+	res := share.Upload(rep, endpoint)
+	if res.Hash == "" {
+		// Hash failed entirely — nothing to print.
 		return
 	}
-	fmt.Fprintf(cmd.ErrOrStderr(), "share URL (Phase-1 stub, viewer ships with sandbox): %s\n", url)
+	suffix := ""
+	if res.Posted {
+		suffix = " (uploaded)"
+	} else if res.Error != "" {
+		suffix = " (offline / not uploaded — " + res.Error + ")"
+	}
+	fmt.Fprintf(cmd.ErrOrStderr(), "share URL: %s%s\n", res.URL, suffix)
 }
 
 // checkFailOn returns errFindings when any finding meets or exceeds
