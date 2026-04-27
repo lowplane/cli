@@ -466,6 +466,34 @@ Ship with confidence: every recommendation is paired with a Confidence band, eve
 
 ---
 
+## Public Go API
+
+Everything under [`pkg/`](pkg/) is the stable public surface. Anything under `internal/` is CLI-side composition and may change without notice.
+
+| Package | Purpose |
+| --- | --- |
+| [`pkg/parser`](pkg/parser) | Helm `values.yaml` → normalised `Workload` model: resources, image refs, `securityContext`, replicas |
+| [`pkg/rules`](pkg/rules) | The full 30-detector library (15 cost + 15 security), the `Detector` interface, `Finding`, severity / confidence enums, and the `All()` registry |
+
+```go
+import (
+    "github.com/lowplane/sevro/pkg/parser"
+    "github.com/lowplane/sevro/pkg/rules"
+)
+
+func analyze(values io.Reader) ([]rules.Finding, error) {
+    workloads, err := parser.ParseValues(values)
+    if err != nil {
+        return nil, err
+    }
+    return rules.Run(workloads, rules.All()), nil
+}
+```
+
+The Sevro proprietary backend imports these two packages directly via `go.mod`; this is *the* mechanism by which the SaaS reuses CLI rule definitions instead of forking them. New detectors land in `pkg/rules` first, the backend follows automatically. Breaking changes to anything under `pkg/` go through semver and a deprecation notice.
+
+---
+
 ## FAQ
 
 <details>
@@ -492,7 +520,7 @@ The CLI is cluster-agnostic. It reads chart files; it does not care where the cl
 <details>
 <summary><b>How do I extend it with my own detectors?</b></summary>
 
-The detector SDK is in development for Q4 2026. Until then, the easiest path is to fork this repo and add a detector in `internal/rules/`. PRs adding genuinely useful new detectors are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+The detector library is exported as a stable Go package at [`pkg/rules`](pkg/rules) — see [Public Go API](#public-go-api) below. To add a detector to the upstream library, drop a new file under `pkg/rules/` implementing the `Detector` interface and register it in `pkg/rules/types.go::All()`. PRs adding genuinely useful new detectors are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 </details>
 

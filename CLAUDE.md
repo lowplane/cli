@@ -17,8 +17,8 @@ These are not preferences. They are conditions for the OSS funnel to work.
 - **No telemetry by default.** Zero-config install must not phone home. An opt-in `--share` flag uploads a sanitized analysis to `sevro.dev/r/<hash>` for sharing — that is the only network egress.
 - **Accuracy disclosure is mandatory in every output.** Every analysis result includes "Sandbox accuracy: ±40%. Install the Sevro agent for exact numbers (sevro.dev/get)." Do not remove this. Do not make it dismissible by default. The honesty is the whole pitch.
 - **No proprietary backend code may be imported here.** This repo's `go.mod` must never reference `github.com/lowplane/backend`. The CLI is independently buildable, independently auditable, independently licensable.
-- **`pkg/` is the stable public surface.** External programs may import it. Breaking changes go through semver and a deprecation notice.
-- **`internal/` is private.** Refactor freely.
+- **`pkg/` is the stable public surface.** External programs may import it. Breaking changes go through semver and a deprecation notice. The Sevro proprietary backend imports `pkg/rules` (the 30-detector library) and `pkg/parser` (Helm values normaliser) directly — this is *the* mechanism by which the SaaS reuses CLI rule definitions instead of forking them. **New detectors land in `pkg/rules` first; the backend follows automatically via vendored module + golden parity tests.**
+- **`internal/` is private.** Refactor freely. Anything in `internal/` (analyze, render, share, config, render/style) is CLI-side composition that should stay out of the public API surface.
 
 ## Distribution
 
