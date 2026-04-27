@@ -3,7 +3,7 @@
 ────────────────────────────────────────────────────────────────────────────────
 
   source: /home/shivam/Desktop/Merge/sevro/testdata/fixtures/basic-chart/values.yaml
-  5 workloads · 2 findings
+  8 workloads · 2 findings
 
    MED    cache
     Image not pinned to a stable tag

@@ -1,8 +1,26 @@
 {
   "accuracy_disclosure": "Sandbox accuracy: ±40%. Install the Sevro agent for exact numbers (sevro.dev/get).",
   "source": "demo",
-  "workloads_analyzed": 5,
+  "workloads_analyzed": 8,
   "findings": [
+    {
+      "DetectorID": "privileged-container",
+      "Workload": "admin-tool",
+      "Title": "Container declared privileged",
+      "Detail": "securityContext.privileged=true bypasses every Linux capability check. Privileged is correct only for node-level agents (CSI drivers, node exporters); application workloads should set privileged=false and request the specific capabilities they actually need.",
+      "MonthlyUSDCents": 0,
+      "Severity": "HIGH",
+      "Confidence": "high"
+    },
+    {
+      "DetectorID": "run-as-root",
+      "Workload": "admin-tool",
+      "Title": "Container runs as root",
+      "Detail": "securityContext.runAsNonRoot is set to false. Running as UID 0 expands the blast radius of any container escape. Set runAsNonRoot=true and runAsUser to a non-zero UID.",
+      "MonthlyUSDCents": 0,
+      "Severity": "HIGH",
+      "Confidence": "high"
+    },
     {
       "DetectorID": "cpu-overprovisioned",
       "Workload": "api",
@@ -22,6 +40,15 @@
       "Confidence": "medium"
     },
     {
+      "DetectorID": "run-as-root",
+      "Workload": "api",
+      "Title": "runAsNonRoot not declared",
+      "Detail": "securityContext.runAsNonRoot is not declared. Without it, Kubernetes defers to the image's USER directive — which is UID 0 for most public images. Set runAsNonRoot=true to make the intent explicit.",
+      "MonthlyUSDCents": 0,
+      "Severity": "MED",
+      "Confidence": "medium"
+    },
+    {
       "DetectorID": "image-pinned-latest",
       "Workload": "cache",
       "Title": "Image not pinned to a stable tag",
@@ -37,6 +64,24 @@
       "Detail": "Image fluentd uses (no tag). The same tag can resolve to different bytes across deploys; rollback becomes ambiguous. Pin to an immutable digest or version tag.",
       "MonthlyUSDCents": 0,
       "Severity": "MED",
+      "Confidence": "high"
+    },
+    {
+      "DetectorID": "replicas-too-high",
+      "Workload": "shipper",
+      "Title": "High static replica count without an autoscaler",
+      "Detail": "Replicas set to 10 without an HPA. Static high replica counts pay for unused capacity 24/7. Either enable autoscaling.enabled=true or right-size the static count to your observed P95.",
+      "MonthlyUSDCents": 0,
+      "Severity": "MED",
+      "Confidence": "medium"
+    },
+    {
+      "DetectorID": "host-network",
+      "Workload": "sniffer",
+      "Title": "Pod uses host network",
+      "Detail": "hostNetwork=true puts the pod in the node's network namespace, bypassing NetworkPolicy and exposing localhost services on the host. Required for some CNI plugins and ingress controllers; otherwise leave it unset.",
+      "MonthlyUSDCents": 0,
+      "Severity": "HIGH",
       "Confidence": "high"
     },
     {

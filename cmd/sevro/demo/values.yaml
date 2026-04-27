@@ -1,9 +1,12 @@
 # Demo chart — exercises every Year-1 detector.
-# - api      cpu-overprovisioned + memory-overprovisioned
-# - worker   missing-memory-limit + missing-cpu-limit
-# - cache    image-pinned-latest (Tag: latest)
-# - logger   image-pinned-latest (no tag)
-# - clean    fully right-sized; produces no findings
+# - api         cpu-overprovisioned + memory-overprovisioned + run-as-root (unset)
+# - worker      missing-memory-limit + missing-cpu-limit
+# - cache       image-pinned-latest (Tag: latest)
+# - logger      image-pinned-latest (no tag)
+# - shipper     replicas-too-high (10 replicas, no HPA)
+# - admin-tool  privileged-container + run-as-root (explicit)
+# - sniffer     host-network
+# - clean       fully right-sized + secure; produces no findings
 
 api:
   image:
@@ -25,6 +28,10 @@ worker:
     requests:
       cpu: "500m"
       memory: "1Gi"
+  # Workload sets runAsNonRoot so it doesn't trip the security detector
+  # along with the resource ones we want to exercise.
+  securityContext:
+    runAsNonRoot: true
 
 cache:
   image:
@@ -38,6 +45,8 @@ cache:
     limits:
       cpu: "500m"
       memory: "512Mi"
+  securityContext:
+    runAsNonRoot: true
 
 logger:
   image: fluentd
@@ -49,6 +58,55 @@ logger:
     limits:
       cpu: "500m"
       memory: "512Mi"
+  securityContext:
+    runAsNonRoot: true
+
+shipper:
+  image:
+    repository: example/shipper
+    tag: "v2.1.0"
+  replicas: 10
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+  securityContext:
+    runAsNonRoot: true
+
+admin-tool:
+  image:
+    repository: example/admin
+    tag: "v0.4.0"
+  replicas: 1
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "100m"
+      memory: "128Mi"
+  securityContext:
+    privileged: true
+    runAsNonRoot: false
+
+sniffer:
+  image:
+    repository: example/sniffer
+    tag: "v1.0.0"
+  replicas: 1
+  hostNetwork: true
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "100m"
+      memory: "128Mi"
+  securityContext:
+    runAsNonRoot: true
 
 clean:
   image:
@@ -62,3 +120,5 @@ clean:
     limits:
       cpu: "500m"
       memory: "512Mi"
+  securityContext:
+    runAsNonRoot: true

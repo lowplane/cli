@@ -3,7 +3,22 @@
 ────────────────────────────────────────────────────────────────────────────────
 
   source: demo
-  5 workloads · 6 findings
+  8 workloads · 11 findings
+
+   HIGH   admin-tool
+    Container declared privileged
+    securityContext.privileged=true bypasses every Linux capability check.
+    Privileged is correct only for node-level agents (CSI drivers, node
+    exporters); application workloads should set privileged=false and request
+    the specific capabilities they actually need.
+    confidence: ●●● high
+
+   HIGH   admin-tool
+    Container runs as root
+    securityContext.runAsNonRoot is set to false. Running as UID 0 expands the
+    blast radius of any container escape. Set runAsNonRoot=true and runAsUser
+    to a non-zero UID.
+    confidence: ●●● high
 
    MED    api   save ~$29.20 /mo
     CPU request appears overprovisioned
@@ -15,6 +30,13 @@
     Memory request appears overprovisioned
     Request 1.6Gi vs limit 2Gi — typical utilization rarely justifies this
     ratio. Consider halving the request.
+    confidence: ●●○ medium
+
+   MED    api
+    runAsNonRoot not declared
+    securityContext.runAsNonRoot is not declared. Without it, Kubernetes
+    defers to the image's USER directive — which is UID 0 for most public
+    images. Set runAsNonRoot=true to make the intent explicit.
     confidence: ●●○ medium
 
    MED    cache
@@ -29,6 +51,20 @@
     Image fluentd uses (no tag). The same tag can resolve to different bytes
     across deploys; rollback becomes ambiguous. Pin to an immutable digest or
     version tag.
+    confidence: ●●● high
+
+   MED    shipper
+    High static replica count without an autoscaler
+    Replicas set to 10 without an HPA. Static high replica counts pay for
+    unused capacity 24/7. Either enable autoscaling.enabled=true or right-size
+    the static count to your observed P95.
+    confidence: ●●○ medium
+
+   HIGH   sniffer
+    Pod uses host network
+    hostNetwork=true puts the pod in the node's network namespace, bypassing
+    NetworkPolicy and exposing localhost services on the host. Required for
+    some CNI plugins and ingress controllers; otherwise leave it unset.
     confidence: ●●● high
 
    HIGH   worker

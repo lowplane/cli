@@ -3,16 +3,20 @@
 ────────────────────────────────────────────────────────────────────────────────
 
   source: /home/shivam/Desktop/Merge/sevro/testdata/fixtures/basic-chart/values.yaml
-  workloads analyzed: 5
+  workloads analyzed: 8
 
-  score:  32 / 100    ●○○ low
+  score:  0 / 100    ●○○ low
 
   Penalty breakdown
-    missing-memory-limit               -25
-    missing-cpu-limit                  -3
     cpu-overprovisioned                -10
-    memory-overprovisioned             -10
+    host-network                       -25
     image-pinned-latest                -20
+    memory-overprovisioned             -10
+    missing-cpu-limit                  -3
+    missing-memory-limit               -25
+    privileged-container               -25
+    replicas-too-high                  -10
+    run-as-root                        -35
 
 ────────────────────────────────────────────────────────────────────────────────
   Sandbox accuracy: ±40%. Install the Sevro agent for exact numbers (sevro.dev/get).
