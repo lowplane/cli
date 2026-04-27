@@ -15,6 +15,7 @@ import (
 // Severity captures the suggested triage urgency.
 type Severity string
 
+// Severity values, ordered by triage urgency.
 const (
 	SeverityHigh Severity = "HIGH"
 	SeverityMed  Severity = "MED"
@@ -27,6 +28,7 @@ const (
 // them — see [docs/idea.md](../../../docs/idea.md).
 type Confidence string
 
+// Confidence band values; ranked low → high.
 const (
 	ConfidenceHigh Confidence = "high"
 	ConfidenceMed  Confidence = "medium"
@@ -70,7 +72,7 @@ type Detector interface {
 // sorted findings list. Sort order is stable so renderers and golden
 // tests are deterministic.
 func Run(workloads []parser.Workload, dets []Detector) []Finding {
-	var out []Finding
+	out := make([]Finding, 0, len(workloads)*len(dets))
 	for _, w := range workloads {
 		for _, d := range dets {
 			out = append(out, d.Run(w)...)

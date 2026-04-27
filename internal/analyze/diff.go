@@ -101,12 +101,12 @@ func DiffPaths(a, b string) (DiffReport, error) {
 	if err != nil {
 		return DiffReport{}, err
 	}
-	defer fa.Close()
+	defer func() { _ = fa.Close() }()
 	fb, err := openValues(b)
 	if err != nil {
 		return DiffReport{}, err
 	}
-	defer fb.Close()
+	defer func() { _ = fb.Close() }()
 	return Diff(fa, fb, a, b)
 }
 

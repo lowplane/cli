@@ -59,6 +59,6 @@ func RunPath(path string) (render.Report, error) {
 	if err != nil {
 		return render.Report{}, fmt.Errorf("analyze: open %s: %w", target, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	return Run(f, Options{Source: target})
 }

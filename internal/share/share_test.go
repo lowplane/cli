@@ -156,7 +156,7 @@ func TestUpload_RejectsNon2xxAsError(t *testing.T) {
 
 func TestUpload_NetworkErrorGraceful(t *testing.T) {
 	// Closed server → connection-refused style error
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {}))
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 	srv.Close()
 
 	res := Upload(sample{Workloads: 1}, srv.URL)

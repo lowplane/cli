@@ -252,7 +252,7 @@ func emitShareURL(cmd *cobra.Command, rep any) {
 	} else if res.Error != "" {
 		suffix = " (offline / not uploaded — " + res.Error + ")"
 	}
-	fmt.Fprintf(cmd.ErrOrStderr(), "share URL: %s%s\n", res.URL, suffix)
+	_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "share URL: %s%s\n", res.URL, suffix)
 }
 
 // checkFailOn returns errFindings when any finding meets or exceeds
@@ -261,12 +261,12 @@ func checkFailOn(rep render.Report, threshold string) error {
 	if threshold == "" {
 		return nil
 	}
-	min := rules.Severity(toUpper(threshold))
-	if !validSeverity(min) {
+	threshSev := rules.Severity(toUpper(threshold))
+	if !validSeverity(threshSev) {
 		return fmt.Errorf("invalid --fail-on severity %q (want low|med|high)", threshold)
 	}
 	for _, f := range rep.Findings {
-		if severityRank(f.Severity) >= severityRank(min) {
+		if severityRank(f.Severity) >= severityRank(threshSev) {
 			return errFindings
 		}
 	}
@@ -395,7 +395,7 @@ func printError(w io.Writer, err error) {
 		useColor = style.IsTTY(f) && os.Getenv("NO_COLOR") == ""
 	}
 	t := style.NewTheme(useColor)
-	fmt.Fprintln(w, t.SevHigh.Render(" ERROR ")+" "+err.Error())
+	_, _ = fmt.Fprintln(w, t.SevHigh.Render(" ERROR ")+" "+err.Error())
 }
 
 // bytesReader is a tiny adapter so analyze.Run can read from a byte slice

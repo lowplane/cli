@@ -13,9 +13,9 @@ import (
 	"strings"
 )
 
-// CPU is millicores. 1 CPU == 1000 milli-CPU.
+// Quantity is a parsed Kubernetes resource scalar.
 //
-// Memory is bytes.
+// CPU is stored as millicores (1 CPU == 1000 milli-CPU); memory as bytes.
 type Quantity struct {
 	Value    int64  // canonical units (millicores for CPU, bytes for memory)
 	Set      bool   // whether the source actually had a value

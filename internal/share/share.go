@@ -38,7 +38,7 @@ const BaseURL = "https://sevro.dev/r/"
 // JSON output.
 const HashLen = 12
 
-// Sanitised removes from `report` any fields that could contain user
+// Sanitise removes from `report` any fields that could contain user
 // or environment-specific data before hashing. The output has the
 // same shape as the original report; consumers should not assume
 // payload bytes are equal between runs that differ only in source
@@ -179,7 +179,7 @@ func Upload(report any, endpoint string) UploadResult {
 	if err != nil {
 		return UploadResult{Hash: hash, URL: url, Error: err.Error()}
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return UploadResult{Hash: hash, URL: url, Error: fmt.Sprintf("upload rejected: HTTP %d", resp.StatusCode)}
 	}
@@ -196,7 +196,7 @@ func IsHash(s string) bool {
 	s = strings.ToLower(s)
 	for i := 0; i < len(s); i++ {
 		c := s[i]
-		if !(c >= '0' && c <= '9') && !(c >= 'a' && c <= 'f') {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
 			return false
 		}
 	}

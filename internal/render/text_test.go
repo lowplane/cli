@@ -22,7 +22,7 @@ func stripANSI(s string) string {
 		// CSI: ESC [ ... m | ESC [ ... <letter>
 		if i+1 < len(s) && s[i+1] == '[' {
 			j := i + 2
-			for j < len(s) && !(s[j] >= '@' && s[j] <= '~') {
+			for j < len(s) && (s[j] < '@' || s[j] > '~') {
 				j++
 			}
 			if j < len(s) {

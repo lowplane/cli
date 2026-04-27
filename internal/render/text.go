@@ -135,8 +135,7 @@ func writeFinding(b *strings.Builder, t style.Theme, f rules.Finding, width int)
 
 	// First line: badge | workload | savings (right-anchored when present)
 	right := ""
-	switch {
-	case f.MonthlyUSDCents > 0:
+	if f.MonthlyUSDCents > 0 {
 		right = t.Savings.Render("save ~$" + formatCents(f.MonthlyUSDCents) + " /mo")
 	}
 

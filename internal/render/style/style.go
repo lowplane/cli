@@ -157,7 +157,7 @@ func (t Theme) Hyperlink(label, url string) string {
 	return fmt.Sprintf("\x1b]8;;%s\x1b\\%s\x1b]8;;\x1b\\", url, label)
 }
 
-// Divider returns a horizontal rule the given width.
+// DividerLine returns a horizontal rule the given width.
 func (t Theme) DividerLine(width int) string {
 	if width <= 0 {
 		width = 64
