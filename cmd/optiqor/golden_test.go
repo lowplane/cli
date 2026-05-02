@@ -40,6 +40,11 @@ func TestGolden(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Pin terminal width so the boxed-card layout is deterministic
+	// across machines. Without this the developer's $COLUMNS leaks
+	// into golden output and CI (no TTY → fallback 80) diverges.
+	t.Setenv("COLUMNS", "80")
+
 	for _, tc := range goldenCases {
 		t.Run(tc.name, func(t *testing.T) {
 			cmd := newRootCmd()
