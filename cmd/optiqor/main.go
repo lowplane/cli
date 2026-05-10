@@ -22,6 +22,7 @@ import (
 	"github.com/optiqor/optiqor-cli/internal/render/style"
 	roastpkg "github.com/optiqor/optiqor-cli/internal/roast"
 	"github.com/optiqor/optiqor-cli/internal/share"
+	"github.com/optiqor/optiqor-cli/pkg/htmlrender"
 	"github.com/optiqor/optiqor-cli/pkg/rules"
 )
 
@@ -130,6 +131,7 @@ func versionTemplate() string {
 func newAnalyzeCmd() *cobra.Command {
 	var (
 		jsonOut    bool
+		htmlPath   string
 		offline    bool
 		shareFlag  bool
 		roast      bool
@@ -188,6 +190,13 @@ side-effect of parsing — they are not the headline feature.
 			if roast {
 				rep = roastpkg.Apply(rep)
 			}
+			if htmlPath != "" {
+				if err := writeHTMLReport(htmlPath, rep); err != nil {
+					return err
+				}
+				// --html is a side-channel: text/JSON still prints to
+				// stdout so users get the terminal report AND a file.
+			}
 			if err := emitReport(cmd, rep, jsonOut, outputPath, roast); err != nil {
 				return err
 			}
@@ -199,6 +208,7 @@ side-effect of parsing — they are not the headline feature.
 		},
 	}
 	cmd.Flags().BoolVar(&jsonOut, "json", false, "emit machine-readable JSON")
+	cmd.Flags().StringVar(&htmlPath, "html", "", "also write a self-contained HTML report to this path")
 	cmd.Flags().BoolVar(&offline, "offline", true, "do not perform any network calls (always true in Phase 1)")
 	cmd.Flags().BoolVar(&shareFlag, "share", false, "print optiqor.dev/r/<hash> for the sanitised analysis (no upload in Phase 1)")
 	cmd.Flags().BoolVar(&roast, "roast", false, "humorous output (findings stay accurate)")
@@ -207,6 +217,24 @@ side-effect of parsing — they are not the headline feature.
 	cmd.Flags().StringVar(&failOn, "fail-on", "", "exit code 1 when any finding is at this severity or higher (low|med|high)")
 	cmd.Flags().StringVarP(&outputPath, "output", "o", "", "write the rendered output to a file instead of stdout")
 	return cmd
+}
+
+// writeHTMLReport renders rep through pkg/htmlrender into the file at
+// path. The same package is consumed by the backend's share-page
+// handler so the local file and the optiqor.dev/r/<hash> page render
+// byte-identically.
+func writeHTMLReport(path string, rep render.Report) error {
+	f, err := os.Create(path) //nolint:gosec // user-supplied output path
+	if err != nil {
+		return fmt.Errorf("open --html: %w", err)
+	}
+	defer f.Close()
+	return htmlrender.Render(f, htmlrender.Data{
+		Source:    rep.Source,
+		Workloads: rep.Workloads,
+		Findings:  rep.Findings,
+		Mode:      htmlrender.ModeSandbox,
+	})
 }
 
 // emitReport renders the report in JSON or styled text. When
