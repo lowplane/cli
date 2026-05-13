@@ -13,6 +13,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -200,17 +201,18 @@ side-effect of parsing — they are not the headline feature.
 			if err := emitReport(cmd, rep, jsonOut, outputPath, roast); err != nil {
 				return err
 			}
-			if shareFlag {
+			if shareFlag && offlineMode(offline) {
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "warning: --share is ignored in --offline mode")
+			} else if shareFlag {
 				emitShareURL(cmd, rep)
 			}
-			_ = offline
 			return checkFailOn(rep, effFailOn)
 		},
 	}
 	cmd.Flags().BoolVar(&jsonOut, "json", false, "emit machine-readable JSON")
 	cmd.Flags().StringVar(&htmlPath, "html", "", "also write a self-contained HTML report to this path")
-	cmd.Flags().BoolVar(&offline, "offline", true, "do not perform any network calls (always true in Phase 1)")
-	cmd.Flags().BoolVar(&shareFlag, "share", false, "print optiqor.dev/r/<hash> for the sanitised analysis (no upload in Phase 1)")
+	cmd.Flags().BoolVar(&offline, "offline", false, "block opt-in network calls such as --share (also: OPTIQOR_OFFLINE=1)")
+	cmd.Flags().BoolVar(&shareFlag, "share", false, "upload sanitised analysis and print optiqor.dev/r/<hash>")
 	cmd.Flags().BoolVar(&roast, "roast", false, "humorous output (findings stay accurate)")
 	cmd.Flags().StringVar(&minSev, "severity", "", "drop findings below this severity (low|med|high)")
 	cmd.Flags().StringArrayVar(&detectors, "detector", nil, "only run findings from these detector IDs (repeatable)")
@@ -332,6 +334,19 @@ func severityRank(s rules.Severity) int {
 
 func validSeverity(s rules.Severity) bool {
 	return s == rules.SeverityHigh || s == rules.SeverityMed || s == rules.SeverityLow
+}
+
+func offlineMode(flag bool) bool {
+	return flag || envTruthy("OPTIQOR_OFFLINE")
+}
+
+func envTruthy(name string) bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv(name))) {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
+	}
 }
 
 func toUpper(s string) string {

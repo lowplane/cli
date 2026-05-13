@@ -201,8 +201,8 @@ for flag in --json --no-color --severity --fail-on --detector --config --offline
     bash -c "'$BIN' analyze --help 2>&1 | grep -q -- '$flag'"
 done
 
-check "--offline defaults to true (zero-config never phones home)" \
-  bash -c "'$BIN' analyze --help 2>&1 | grep -qE 'offline.*default.*true'"
+check "--offline documents the env override" \
+  bash -c "'$BIN' analyze --help 2>&1 | grep -q -- '--offline' && '$BIN' analyze --help 2>&1 | grep -q 'OPTIQOR_OFFLINE=1'"
 check "--share is OFF by default" \
   bash -c "'$BIN' analyze --help 2>&1 | grep -q -- '--share' && ! '$BIN' analyze --help 2>&1 | grep -qE 'share.*default *true'"
 

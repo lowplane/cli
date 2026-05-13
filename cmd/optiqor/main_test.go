@@ -138,6 +138,58 @@ func TestAnalyze_JSONShape(t *testing.T) {
 	}
 }
 
+func TestAnalyze_OfflineShareWarnsAndSkipsUpload(t *testing.T) {
+	cmd := newRootCmd()
+	var out bytes.Buffer
+	var errBuf bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&errBuf)
+	cmd.SetArgs([]string{"analyze", "../../testdata/fixtures/basic-chart/values.yaml", "--offline", "--share"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("execute --offline --share: %v\nstdout:\n%s\nstderr:\n%s", err, out.String(), errBuf.String())
+	}
+	if !strings.Contains(errBuf.String(), "warning: --share is ignored in --offline mode") {
+		t.Fatalf("missing offline share warning:\n%s", errBuf.String())
+	}
+	if strings.Contains(errBuf.String(), "share URL:") {
+		t.Fatalf("offline share should not print share URL:\n%s", errBuf.String())
+	}
+}
+
+func TestAnalyze_OfflineEnvShareWarnsAndSkipsUpload(t *testing.T) {
+	t.Setenv("OPTIQOR_OFFLINE", "1")
+	cmd := newRootCmd()
+	var out bytes.Buffer
+	var errBuf bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&errBuf)
+	cmd.SetArgs([]string{"analyze", "../../testdata/fixtures/basic-chart/values.yaml", "--share"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("execute OPTIQOR_OFFLINE=1 --share: %v\nstdout:\n%s\nstderr:\n%s", err, out.String(), errBuf.String())
+	}
+	if !strings.Contains(errBuf.String(), "warning: --share is ignored in --offline mode") {
+		t.Fatalf("missing env offline share warning:\n%s", errBuf.String())
+	}
+	if strings.Contains(errBuf.String(), "share URL:") {
+		t.Fatalf("offline env share should not print share URL:\n%s", errBuf.String())
+	}
+}
+
+func TestAnalyze_HelpDocumentsOfflineEnv(t *testing.T) {
+	cmd := newRootCmd()
+	var buf bytes.Buffer
+	cmd.SetOut(&buf)
+	cmd.SetArgs([]string{"analyze", "--help"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("execute analyze --help: %v", err)
+	}
+	for _, want := range []string{"--offline", "OPTIQOR_OFFLINE=1", "--share"} {
+		if !strings.Contains(buf.String(), want) {
+			t.Errorf("analyze help missing %q:\n%s", want, buf.String())
+		}
+	}
+}
+
 func TestResolveColor_NoColorFlag(t *testing.T) {
 	cmd := newRootCmd()
 	if got := resolveColor(cmd, true); got {

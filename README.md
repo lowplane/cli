@@ -440,7 +440,7 @@ flowchart TD
 | Flag | Default | Description |
 | --- | --- | --- |
 | `--json` | false | Emit machine-readable JSON |
-| `--offline` | true | Do not perform any network calls |
+| `--offline` | false | Block opt-in network calls such as `--share` |
 | `--share` | false | Upload sanitized analysis to optiqor.dev (opt-in) |
 | `--no-color` | false | Disable ANSI color in output |
 | `--quiet` | false | Suppress all output except findings |
@@ -453,8 +453,8 @@ flowchart TD
 | Variable | Purpose |
 | --- | --- |
 | `OPTIQOR_NO_COLOR` | Disable color output (CI-friendly, equivalent to `--no-color`) |
-| `OPTIQOR_OFFLINE` | Force offline mode |
-| `OPTIQOR_SHARE_BASE_URL` | Override the share endpoint (for self-hosted Optiqor) |
+| `OPTIQOR_OFFLINE` | Set to `1`, `true`, `yes`, or `on` to force offline mode |
+| `OPTIQOR_SHARE_URL` | Override the share endpoint (for self-hosted Optiqor) |
 | `OPTIQOR_SKIP_POSTINSTALL` | Skip the npm postinstall binary download (for offline npm caches) |
 
 ---
