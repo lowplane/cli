@@ -1,0 +1,103 @@
+# Copyright 2026 Optiqor contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Retroactively trim contributors over the MAX_ASSIGNMENTS cap.
+# Runs daily 30 min after the stale-claim sweep, plus on every issues.assigned
+# event, plus on manual dispatch.
+
+name: Enforce issue cap
+
+on:
+  schedule:
+    - cron: "30 5 * * *"
+  issues:
+    types: [assigned]
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: read
+
+env:
+  MAX_ASSIGNMENTS: 2
+
+jobs:
+  enforce:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trim over-cap contributors
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const repo = { owner: context.repo.owner, repo: context.repo.repo };
+            const MAX = Number(process.env.MAX_ASSIGNMENTS);
+
+            // Page through every open issue and group assignments by user.
+            const issuesByUser = new Map();
+            let page = 1;
+            while (true) {
+              const res = await github.rest.issues.listForRepo({
+                ...repo, state: 'open', assignee: '*', per_page: 100, page,
+              });
+              if (res.data.length === 0) break;
+              for (const issue of res.data) {
+                if (issue.pull_request) continue;
+                for (const a of issue.assignees || []) {
+                  if (!issuesByUser.has(a.login)) issuesByUser.set(a.login, []);
+                  issuesByUser.get(a.login).push(issue);
+                }
+              }
+              if (res.data.length < 100) break;
+              page++;
+            }
+
+            for (const [user, issues] of issuesByUser) {
+              if (issues.length <= MAX) continue;
+
+              let isMaintainer = false;
+              try {
+                const perm = await github.rest.repos.getCollaboratorPermissionLevel({
+                  ...repo, username: user,
+                });
+                const lvl = perm.data.permission;
+                isMaintainer = (lvl === 'admin' || lvl === 'write' || lvl === 'maintain');
+              } catch (e) {
+                // not a collaborator; treat as external (capped)
+              }
+
+              if (isMaintainer) continue;
+
+              // Sort by most recently updated. Keep the top MAX; release the rest.
+              issues.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+              const keep = issues.slice(0, MAX);
+              const release = issues.slice(MAX);
+
+              const keepList = keep.map(i => `#${i.number}`).join(', ');
+
+              for (const issue of release) {
+                core.info(`releasing @${user} from #${issue.number} (over ${MAX}-issue cap)`);
+                await github.rest.issues.removeAssignees({
+                  ...repo, issue_number: issue.number, assignees: [user],
+                });
+
+                // If no assignees left, remove the claimed label and add help wanted.
+                const refreshed = await github.rest.issues.get({ ...repo, issue_number: issue.number });
+                const remaining = (refreshed.data.assignees || []).map(a => a.login);
+                if (remaining.length === 0) {
+                  await github.rest.issues.removeLabel({
+                    ...repo, issue_number: issue.number, name: 'claimed',
+                  }).catch(() => {});
+                  await github.rest.issues.addLabels({
+                    ...repo, issue_number: issue.number, labels: ['help wanted'],
+                  }).catch(() => {});
+                }
+
+                await github.rest.issues.createComment({
+                  ...repo, issue_number: issue.number,
+                  body:
+                    `Auto-released from @${user} because they are over the ${MAX}-issue concurrent-claim cap. ` +
+                    `Keeping their most-recently-updated claims: ${keepList}.\n\n` +
+                    `This issue is open again — anyone may pick it up with \`/assign\`.`,
+                });
+              }
+            }
