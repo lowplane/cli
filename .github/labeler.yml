@@ -1,0 +1,94 @@
+# Copyright 2026 Optiqor contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Auto-label PRs based on changed paths. Labels are scoped to optiqor-cli's
+# actual code surface (analyze, rules, parser, render, cli, npm, share,
+# roast, config) plus release / security / community / docs / testing.
+
+"area/analyze":
+  - changed-files:
+      - any-glob-to-any-file:
+          - internal/analyze/**
+
+"area/rules":
+  - changed-files:
+      - any-glob-to-any-file:
+          - pkg/rules/**
+
+"area/parser":
+  - changed-files:
+      - any-glob-to-any-file:
+          - pkg/parser/**
+
+"area/render":
+  - changed-files:
+      - any-glob-to-any-file:
+          - internal/render/**
+          - pkg/htmlrender/**
+
+"area/cli":
+  - changed-files:
+      - any-glob-to-any-file:
+          - cmd/**
+
+"area/share":
+  - changed-files:
+      - any-glob-to-any-file:
+          - internal/share/**
+
+"area/roast":
+  - changed-files:
+      - any-glob-to-any-file:
+          - internal/roast/**
+
+"area/config":
+  - changed-files:
+      - any-glob-to-any-file:
+          - internal/config/**
+
+"area/npm":
+  - changed-files:
+      - any-glob-to-any-file:
+          - npm/**
+          - package.json
+          - package-lock.json
+
+"area/release":
+  - changed-files:
+      - any-glob-to-any-file:
+          - .goreleaser.yaml
+          - .goreleaser.yml
+          - .github/workflows/release.yml
+
+"area/security":
+  - changed-files:
+      - any-glob-to-any-file:
+          - SECURITY.md
+          - .github/workflows/codeql.yml
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.md"
+          - docs/**
+          - .github/ISSUE_TEMPLATE/**
+
+testing:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*_test.go"
+          - testdata/**
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - .github/workflows/**
+
+"area/community":
+  - changed-files:
+      - any-glob-to-any-file:
+          - CODE_OF_CONDUCT.md
+          - CONTRIBUTING.md
+          - .github/ISSUE_TEMPLATE/**
+          - .github/PULL_REQUEST_TEMPLATE.md
+          - .github/CODEOWNERS
