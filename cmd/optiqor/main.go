@@ -200,16 +200,20 @@ side-effect of parsing — they are not the headline feature.
 			if err := emitReport(cmd, rep, jsonOut, outputPath, roast); err != nil {
 				return err
 			}
+			effectiveOffline := offline || os.Getenv("OPTIQOR_OFFLINE") != ""
 			if shareFlag {
-				emitShareURL(cmd, rep)
+				if effectiveOffline {
+					_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "warning: --share is ignored in --offline mode")
+				} else {
+					emitShareURL(cmd, rep)
+				}
 			}
-			_ = offline
 			return checkFailOn(rep, effFailOn)
 		},
 	}
 	cmd.Flags().BoolVar(&jsonOut, "json", false, "emit machine-readable JSON")
 	cmd.Flags().StringVar(&htmlPath, "html", "", "also write a self-contained HTML report to this path")
-	cmd.Flags().BoolVar(&offline, "offline", true, "do not perform any network calls (always true in Phase 1)")
+	cmd.Flags().BoolVar(&offline, "offline", true, "do not perform any network calls (env: OPTIQOR_OFFLINE=1)")
 	cmd.Flags().BoolVar(&shareFlag, "share", false, "print optiqor.dev/r/<hash> for the sanitised analysis (no upload in Phase 1)")
 	cmd.Flags().BoolVar(&roast, "roast", false, "humorous output (findings stay accurate)")
 	cmd.Flags().StringVar(&minSev, "severity", "", "drop findings below this severity (low|med|high)")
