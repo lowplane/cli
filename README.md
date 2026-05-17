@@ -9,7 +9,7 @@
 [![npm](https://img.shields.io/npm/v/@optiqor/cli.svg?label=%40optiqor%2Fcli&color=blue)](https://www.npmjs.com/package/@optiqor/cli)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Go Reference](https://pkg.go.dev/badge/github.com/optiqor/optiqor-cli.svg)](https://pkg.go.dev/github.com/optiqor/optiqor-cli)
-[![CI](https://img.shields.io/github/actions/workflow/status/optiqor/optiqor/ci.yml?branch=main&label=ci)](https://github.com/optiqor/optiqor-cli/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/optiqor/optiqor-cli/ci.yml?branch=main&label=ci)](https://github.com/optiqor/optiqor-cli/actions/workflows/ci.yml)
 [![Downloads](https://img.shields.io/npm/dm/@optiqor/cli.svg)](https://www.npmjs.com/package/@optiqor/cli)
 
 ```sh
