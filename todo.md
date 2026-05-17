@@ -1,9 +1,9 @@
 # optiqor-cli — repo-local todo
 
 This file tracks CLI-only work. The org-level roadmap that wires both
-repos and the strategy docs is in [../todo.md](../todo.md); items
-here are scoped to what lands inside this repo's `cmd/`, `internal/`,
-or `pkg/`.
+repos and the strategy docs lives in the Optiqor org monorepo (not
+public); items here are scoped to what lands inside this repo's
+`cmd/`, `internal/`, or `pkg/`.
 
 ## Recently shipped
 
@@ -50,5 +50,5 @@ These are conditions for the OSS funnel to work. See [CLAUDE.md](CLAUDE.md) for 
 - **No LLM calls.** The CLI is a deterministic rule engine.
 - **No telemetry by default.** Only `--share` egresses (opt-in).
 - **Accuracy disclosure mandatory in every output.** Verbatim string; renderers must include it.
-- **No proprietary backend code imported.** `go.mod` must never reference `github.com/optiqor/backend`.
+- **No proprietary backend code imported.** `go.mod` must never reference `github.com/optiqor/optiqor`.
 - **`pkg/` is the stable public API.** Breaking changes go through semver and a deprecation notice.
