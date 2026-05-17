@@ -201,10 +201,12 @@ side-effect of parsing — they are not the headline feature.
 			if err := emitReport(cmd, rep, jsonOut, outputPath, roast); err != nil {
 				return err
 			}
-			if shareFlag && offlineMode(offline) {
-				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "warning: --share is ignored in --offline mode")
-			} else if shareFlag {
-				emitShareURL(cmd, rep)
+			if shareFlag {
+				if offlineMode(offline) {
+					_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "warning: --share is ignored in --offline mode")
+				} else {
+					emitShareURL(cmd, rep)
+				}
 			}
 			return checkFailOn(rep, effFailOn)
 		},
@@ -336,6 +338,8 @@ func validSeverity(s rules.Severity) bool {
 	return s == rules.SeverityHigh || s == rules.SeverityMed || s == rules.SeverityLow
 }
 
+// offlineMode is the canonical egress gate. Any new network call in
+// this binary must short-circuit when this returns true.
 func offlineMode(flag bool) bool {
 	return flag || envTruthy("OPTIQOR_OFFLINE")
 }

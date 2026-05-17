@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -156,8 +158,19 @@ func TestAnalyze_OfflineShareWarnsAndSkipsUpload(t *testing.T) {
 	}
 }
 
-func TestAnalyze_OfflineEnvShareWarnsAndSkipsUpload(t *testing.T) {
-	t.Setenv("OPTIQOR_OFFLINE", "1")
+func TestAnalyze_ShareUploadsWhenOfflineDisabled(t *testing.T) {
+	shareServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("share upload method = %s, want POST", r.Method)
+		}
+		if r.Header.Get("X-Optiqor-Hash") == "" {
+			t.Error("share upload missing X-Optiqor-Hash header")
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	t.Cleanup(shareServer.Close)
+	t.Setenv("OPTIQOR_SHARE_URL", shareServer.URL)
+
 	cmd := newRootCmd()
 	var out bytes.Buffer
 	var errBuf bytes.Buffer
@@ -165,7 +178,29 @@ func TestAnalyze_OfflineEnvShareWarnsAndSkipsUpload(t *testing.T) {
 	cmd.SetErr(&errBuf)
 	cmd.SetArgs([]string{"analyze", "../../testdata/fixtures/basic-chart/values.yaml", "--share"})
 	if err := cmd.Execute(); err != nil {
-		t.Fatalf("execute OPTIQOR_OFFLINE=1 --share: %v\nstdout:\n%s\nstderr:\n%s", err, out.String(), errBuf.String())
+		t.Fatalf("execute --share: %v\nstdout:\n%s\nstderr:\n%s", err, out.String(), errBuf.String())
+	}
+	if strings.Contains(errBuf.String(), "warning: --share is ignored in --offline mode") {
+		t.Fatalf("online share should not warn about offline mode:\n%s", errBuf.String())
+	}
+	if !strings.Contains(errBuf.String(), "share URL:") {
+		t.Fatalf("online share should print share URL:\n%s", errBuf.String())
+	}
+	if !strings.Contains(errBuf.String(), "(uploaded)") {
+		t.Fatalf("online share should report upload success:\n%s", errBuf.String())
+	}
+}
+
+func TestAnalyze_OfflineEnvShareWarnsAndSkipsUpload(t *testing.T) {
+	t.Setenv("OPTIQOR_OFFLINE", "1")
+	cmd := newRootCmd()
+	var out bytes.Buffer
+	var errBuf bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&errBuf)
+	cmd.SetArgs([]string{"analyze", "../../testdata/fixtures/basic-chart/values.yaml", "--offline=false", "--share"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("execute OPTIQOR_OFFLINE=1 --offline=false --share: %v\nstdout:\n%s\nstderr:\n%s", err, out.String(), errBuf.String())
 	}
 	if !strings.Contains(errBuf.String(), "warning: --share is ignored in --offline mode") {
 		t.Fatalf("missing env offline share warning:\n%s", errBuf.String())
