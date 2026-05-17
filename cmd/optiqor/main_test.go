@@ -138,6 +138,20 @@ func TestAnalyze_JSONShape(t *testing.T) {
 	}
 }
 
+func TestAudit_DefaultFailOnIsOptIn(t *testing.T) {
+	cmd := newRootCmd()
+	var buf bytes.Buffer
+	cmd.SetOut(&buf)
+	cmd.SetErr(&buf)
+	cmd.SetArgs([]string{"--no-color", "audit", "../../testdata/fixtures/basic-chart/values.yaml"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("audit without --fail-on should not fail by default: %v\n%s", err, buf.String())
+	}
+	if !strings.Contains(buf.String(), "HIGH") {
+		t.Fatalf("audit fixture should still report high severity findings:\n%s", buf.String())
+	}
+}
+
 func TestResolveColor_NoColorFlag(t *testing.T) {
 	cmd := newRootCmd()
 	if got := resolveColor(cmd, true); got {

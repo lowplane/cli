@@ -195,7 +195,7 @@ The pipeline is deterministic. The same input always produces the same output. T
 | `--no-color` / `NO_COLOR=1` | Disable ANSI output; auto-detected when piped |
 | `--severity low\|med\|high` | Drop findings below the threshold (analyze) |
 | `--detector <id>` | Repeatable allow-list, e.g. `--detector cpu-overprovisioned --detector image-pinned-latest` |
-| `--fail-on low\|med\|high` | Exit code 1 if any finding meets/exceeds the severity (analyze, audit) |
+| `--fail-on low\|med\|high` | Exit code 1 if any finding meets/exceeds the severity (analyze, audit; unset by default) |
 | `--config <path>` | Load `.optiqor.yaml` from a custom path (default `./.optiqor.yaml` or `$OPTIQOR_CONFIG`) |
 
 ### Exit codes
